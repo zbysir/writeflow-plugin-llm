@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cast"
-	"github.com/zbysir/writeflow/pkg/plugin"
+	"github.com/zbysir/writeflow/pkg/export"
+	"io"
 	"reflect"
 )
 
@@ -16,25 +17,25 @@ func (e ExecFun) Exec(ctx context.Context, params map[string]interface{}) (rsp m
 	return e(ctx, params)
 }
 
-func NewFun(fun func(ctx context.Context, params map[string]interface{}) (rsp map[string]interface{}, err error)) plugin.CMDer {
+func NewFun(fun func(ctx context.Context, params map[string]interface{}) (rsp map[string]interface{}, err error)) export.CMDer {
 	return ExecFun(fun)
 }
 
 type LangChain struct {
 }
 
-func NewLangChain() plugin.Plugin {
+func NewLangChain() export.Plugin {
 	return &LangChain{}
 }
 
-func (l *LangChain) Info() plugin.PluginInfo {
-	return plugin.PluginInfo{
+func (l *LangChain) Info() export.PluginInfo {
+	return export.PluginInfo{
 		NameSpace: "langchain",
 	}
 }
 
-func (l *LangChain) Categories() []plugin.Category {
-	return []plugin.Category{
+func (l *LangChain) Categories() []export.Category {
+	return []export.Category{
 		{
 			Key: "llm",
 			Name: map[string]string{
@@ -45,23 +46,23 @@ func (l *LangChain) Categories() []plugin.Category {
 	}
 }
 
-func (l *LangChain) Components() []plugin.Component {
-	return []plugin.Component{
+func (l *LangChain) Components() []export.Component {
+	return []export.Component{
 		{
 			Id:       0,
 			Type:     "new_openai",
 			Category: "llm",
-			Data: plugin.ComponentData{
+			Data: export.ComponentData{
 				Name: map[string]string{
 					"zh-CN": "OpenAI",
 				},
 				Icon:        "",
 				Description: map[string]string{},
-				Source: plugin.ComponentSource{
+				Source: export.ComponentSource{
 					CmdType:    "builtin",
 					BuiltinCmd: "new_openai",
 				},
-				InputParams: []plugin.NodeInputParam{
+				InputParams: []export.NodeInputParam{
 					{
 						Name: map[string]string{
 							"zh-CN": "ApiKey",
@@ -79,7 +80,7 @@ func (l *LangChain) Components() []plugin.Component {
 						Optional: false,
 					},
 				},
-				OutputAnchors: []plugin.NodeOutputAnchor{
+				OutputAnchors: []export.NodeOutputAnchor{
 					{
 						Name: map[string]string{
 							"zh-CN": "Default",
@@ -94,17 +95,17 @@ func (l *LangChain) Components() []plugin.Component {
 			Id:       0,
 			Type:     "chat_memory",
 			Category: "llm",
-			Data: plugin.ComponentData{
+			Data: export.ComponentData{
 				Name: map[string]string{
 					"zh-CN": "ChatMemory",
 				},
 				Icon:        "",
 				Description: map[string]string{},
-				Source: plugin.ComponentSource{
+				Source: export.ComponentSource{
 					CmdType:    "builtin",
 					BuiltinCmd: "chat_memory",
 				},
-				InputParams: []plugin.NodeInputParam{
+				InputParams: []export.NodeInputParam{
 					{
 						Name: map[string]string{
 							"zh-CN": "SessionID",
@@ -114,7 +115,7 @@ func (l *LangChain) Components() []plugin.Component {
 						Optional: true,
 					},
 				},
-				OutputAnchors: []plugin.NodeOutputAnchor{
+				OutputAnchors: []export.NodeOutputAnchor{
 					{
 						Name: map[string]string{
 							"zh-CN": "Default",
@@ -128,17 +129,17 @@ func (l *LangChain) Components() []plugin.Component {
 		{
 			Type:     "langchain_call",
 			Category: "llm",
-			Data: plugin.ComponentData{
+			Data: export.ComponentData{
 				Name: map[string]string{
 					"zh-CN": "LangChain",
 				},
 				Icon:        "",
 				Description: map[string]string{},
-				Source: plugin.ComponentSource{
+				Source: export.ComponentSource{
 					CmdType:    "builtin",
 					BuiltinCmd: "langchain_call",
 				},
-				InputParams: []plugin.NodeInputParam{
+				InputParams: []export.NodeInputParam{
 					{
 						InputType: "anchor",
 						Name: map[string]string{
@@ -182,7 +183,7 @@ func (l *LangChain) Components() []plugin.Component {
 						Type:  "bool",
 					},
 				},
-				OutputAnchors: []plugin.NodeOutputAnchor{
+				OutputAnchors: []export.NodeOutputAnchor{
 					{
 						Name: map[string]string{
 							"zh-CN": "Default",
@@ -203,8 +204,8 @@ func (l *LangChain) Components() []plugin.Component {
 	}
 }
 
-func (l *LangChain) Cmd() map[string]plugin.CMDer {
-	return map[string]plugin.CMDer{
+func (l *LangChain) Cmd() map[string]export.CMDer {
+	return map[string]export.CMDer{
 		"new_openai": NewFun(func(ctx context.Context, params map[string]interface{}) (rsp map[string]interface{}, err error) {
 			key := params["api_key"].(string)
 			baseUrl := cast.ToString(params["base_url"])
@@ -234,6 +235,7 @@ func (l *LangChain) Cmd() map[string]plugin.CMDer {
 			if promptI == nil {
 				return nil, fmt.Errorf("prompt is nil")
 			}
+			enableSteam := cast.ToBool(params["stream"])
 			prompt := promptI.(string)
 			var functions []*openai.FunctionDefine
 			if functionI != nil {
@@ -260,33 +262,92 @@ func (l *LangChain) Cmd() map[string]plugin.CMDer {
 			}
 			messages = append(messages, userMsg)
 
-			rsp2, err := openaiClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-				Model:            "gpt-3.5-turbo-0613",
-				Messages:         messages,
-				MaxTokens:        2000,
-				Temperature:      0,
-				TopP:             0,
-				N:                0,
-				Stream:           false,
-				Stop:             nil,
-				PresencePenalty:  0,
-				FrequencyPenalty: 0,
-				LogitBias:        nil,
-				User:             "",
-				Functions:        functions,
-				FunctionCall:     "",
-			})
-			if err != nil {
-				return nil, err
+			if enableSteam {
+				s, err := openaiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
+					Model:            "gpt-3.5-turbo-0613",
+					Messages:         messages,
+					MaxTokens:        2000,
+					Temperature:      0,
+					TopP:             0,
+					N:                0,
+					Stream:           true,
+					Stop:             nil,
+					PresencePenalty:  0,
+					FrequencyPenalty: 0,
+					LogitBias:        nil,
+					User:             "",
+					Functions:        functions,
+					FunctionCall:     "",
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				steam := export.NewSteamResponse[string]()
+				go func() {
+					defer s.Close()
+					var content string
+					for {
+						recv, err := s.Recv()
+						if err != nil {
+							if err == io.EOF {
+								break
+							}
+							steam.Close(err)
+							break
+						}
+						if len(recv.Choices) == 0 {
+							steam.Close(fmt.Errorf("recv.Choices is empty"))
+							break
+						}
+
+						c := recv.Choices[0].Delta.Content
+						if len(c) != 0 {
+							content += c
+							steam.Append(c)
+						}
+					}
+					steam.Close(nil)
+
+					if chatMemory != nil {
+						if content != "" {
+							chatMemory.AppendHistory(ctx, openai.ChatCompletionMessage{
+								Role:    openai.ChatMessageRoleAssistant,
+								Content: content,
+							})
+						}
+					}
+				}()
+
+				return map[string]interface{}{"default": steam, "function_call": ""}, nil
+			} else {
+				rsp, err := openaiClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+					Model:            "gpt-3.5-turbo-0613",
+					Messages:         messages,
+					MaxTokens:        2000,
+					Temperature:      0,
+					TopP:             0,
+					N:                0,
+					Stream:           false,
+					Stop:             nil,
+					PresencePenalty:  0,
+					FrequencyPenalty: 0,
+					LogitBias:        nil,
+					User:             "",
+					Functions:        functions,
+					FunctionCall:     "",
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				content := rsp.Choices[0].Message.Content
+				if chatMemory != nil {
+					chatMemory.AppendHistory(ctx, rsp.Choices[0].Message)
+				}
+
+				return map[string]interface{}{"default": content, "function_call": rsp.Choices[0].Message.FunctionCall}, nil
 			}
-
-			content := rsp2.Choices[0].Message.Content
-			if chatMemory != nil {
-				chatMemory.AppendHistory(ctx, rsp2.Choices[0].Message)
-			}
-
-			return map[string]interface{}{"default": content, "function_call": rsp2.Choices[0].Message.FunctionCall}, nil
-
 		}),
 	}
 }
@@ -295,8 +356,8 @@ func (l *LangChain) GoSymbols() map[string]map[string]reflect.Value {
 	return nil
 }
 
-var _ plugin.Plugin = (*LangChain)(nil)
+var _ export.Plugin = (*LangChain)(nil)
 
-func Register(r plugin.Register) {
+func Register(r export.Register) {
 	r.RegisterPlugin(NewLangChain())
 }

@@ -1,5 +1,5 @@
 // Package plugin should be kept simple to work well with yaegi
-package plugin
+package export
 
 import (
 	"context"
@@ -16,6 +16,7 @@ type Category struct {
 	Name Locales `json:"name"`
 	Desc Locales `json:"desc"`
 }
+
 type Component struct {
 	Id       int64         `json:"id"`
 	Type     string        `json:"type"`     // 组件类型，需要全局唯一
@@ -46,11 +47,11 @@ type ComponentSource struct {
 }
 
 type NodeOutputAnchor struct {
-	Name    map[string]string `json:"name"`
-	Key     string            `json:"key"`
-	Type    string            `json:"type"`              // 数据模型，如 string / int / any
-	List    bool              `json:"list,omitempty"`    // 是否是数组
-	Dynamic bool              `json:"dynamic,omitempty"` // 是否是动态输入，是动态输入才能删除。
+	Name    Locales `json:"name"`
+	Key     string  `json:"key"`
+	Type    string  `json:"type"`              // 数据模型，如 string / int / any
+	List    bool    `json:"list,omitempty"`    // 是否是数组
+	Dynamic bool    `json:"dynamic,omitempty"` // 是否是动态输入，是动态输入才能删除。
 }
 
 type NodeInputParam struct {
