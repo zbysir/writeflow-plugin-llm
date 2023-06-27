@@ -283,7 +283,7 @@ func (l *LangChain) Cmd() map[string]export.CMDer {
 					return nil, err
 				}
 
-				steam := export.NewSteamResponse[string]()
+				steam := NewSteamResponse()
 				go func() {
 					defer s.Close()
 					var content string

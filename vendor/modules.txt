@@ -1,3 +1,7 @@
+# github.com/google/go-cmp v0.5.9
+## explicit; go 1.13
+# github.com/rogpeppe/go-internal v1.8.0
+## explicit; go 1.11
 # github.com/sashabaranov/go-openai v1.11.2
 ## explicit; go 1.18
 github.com/sashabaranov/go-openai
@@ -5,6 +9,6 @@ github.com/sashabaranov/go-openai/internal
 # github.com/spf13/cast v1.5.0
 ## explicit; go 1.18
 github.com/spf13/cast
-# github.com/zbysir/writeflow v0.0.0-20230627085552-4bf86ac41a44
+# github.com/zbysir/writeflow v0.0.0-20230627091418-5f4fa7ba9eed
 ## explicit; go 1.20
 github.com/zbysir/writeflow/pkg/export
