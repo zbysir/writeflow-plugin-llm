@@ -7,7 +7,6 @@ import (
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cast"
 	"github.com/zbysir/writeflow/pkg/export"
-	"io"
 	"reflect"
 )
 
@@ -174,14 +173,14 @@ func (l *LangChain) Components() []export.Component {
 						Key:  "prompt",
 						Type: "string",
 					},
-					{
-						Name: map[string]string{
-							"zh-CN": "流式返回",
-						},
-						Value: true,
-						Key:   "stream",
-						Type:  "bool",
-					},
+					//{
+					//	Name: map[string]string{
+					//		"zh-CN": "流式返回",
+					//	},
+					//	Value: true,
+					//	Key:   "stream",
+					//	Type:  "bool",
+					//},
 				},
 				OutputAnchors: []export.NodeOutputAnchor{
 					{
@@ -262,64 +261,66 @@ func (l *LangChain) Cmd() map[string]export.CMDer {
 			}
 			messages = append(messages, userMsg)
 
+			enableSteam = false
 			if enableSteam {
-				s, err := openaiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
-					Model:            "gpt-3.5-turbo-0613",
-					Messages:         messages,
-					MaxTokens:        2000,
-					Temperature:      0,
-					TopP:             0,
-					N:                0,
-					Stream:           true,
-					Stop:             nil,
-					PresencePenalty:  0,
-					FrequencyPenalty: 0,
-					LogitBias:        nil,
-					User:             "",
-					Functions:        functions,
-					FunctionCall:     "",
-				})
-				if err != nil {
-					return nil, err
-				}
-
-				steam := NewSteamResponse()
-				go func() {
-					defer s.Close()
-					var content string
-					for {
-						recv, err := s.Recv()
-						if err != nil {
-							if err == io.EOF {
-								break
-							}
-							steam.Close(err)
-							break
-						}
-						if len(recv.Choices) == 0 {
-							steam.Close(fmt.Errorf("recv.Choices is empty"))
-							break
-						}
-
-						c := recv.Choices[0].Delta.Content
-						if len(c) != 0 {
-							content += c
-							steam.Append(c)
-						}
-					}
-					steam.Close(nil)
-
-					if chatMemory != nil {
-						if content != "" {
-							chatMemory.AppendHistory(ctx, openai.ChatCompletionMessage{
-								Role:    openai.ChatMessageRoleAssistant,
-								Content: content,
-							})
-						}
-					}
-				}()
-
-				return map[string]interface{}{"default": steam, "function_call": ""}, nil
+				//s, err := openaiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
+				//	Model:            "gpt-3.5-turbo-0613",
+				//	Messages:         messages,
+				//	MaxTokens:        2000,
+				//	Temperature:      0,
+				//	TopP:             0,
+				//	N:                0,
+				//	Stream:           true,
+				//	Stop:             nil,
+				//	PresencePenalty:  0,
+				//	FrequencyPenalty: 0,
+				//	LogitBias:        nil,
+				//	User:             "",
+				//	Functions:        functions,
+				//	FunctionCall:     "",
+				//})
+				//if err != nil {
+				//	return nil, err
+				//}
+				//
+				//steam := NewSteamResponse()
+				//go func() {
+				//	defer s.Close()
+				//	var content string
+				//	for {
+				//		recv, err := s.Recv()
+				//		if err != nil {
+				//			if err == io.EOF {
+				//				break
+				//			}
+				//			steam.Close(err)
+				//			break
+				//		}
+				//		if len(recv.Choices) == 0 {
+				//			steam.Close(fmt.Errorf("recv.Choices is empty"))
+				//			break
+				//		}
+				//
+				//		c := recv.Choices[0].Delta.Content
+				//		if len(c) != 0 {
+				//			content += c
+				//			steam.Append(c)
+				//		}
+				//	}
+				//	steam.Close(nil)
+				//
+				//	if chatMemory != nil {
+				//		if content != "" {
+				//			chatMemory.AppendHistory(ctx, openai.ChatCompletionMessage{
+				//				Role:    openai.ChatMessageRoleAssistant,
+				//				Content: content,
+				//			})
+				//		}
+				//	}
+				//}()
+				//
+				//return map[string]interface{}{"default": steam, "function_call": ""}, nil
+				return map[string]interface{}{"default": ""}, nil
 			} else {
 				rsp, err := openaiClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 					Model:            "gpt-3.5-turbo-0613",
