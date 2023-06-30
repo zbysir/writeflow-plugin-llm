@@ -1,5 +1,8 @@
 # github.com/google/go-cmp v0.5.9
 ## explicit; go 1.13
+# github.com/otiai10/openaigo v1.4.0
+## explicit; go 1.18
+github.com/otiai10/openaigo
 # github.com/rogpeppe/go-internal v1.8.0
 ## explicit; go 1.11
 # github.com/sashabaranov/go-openai v1.11.2

@@ -2,20 +2,53 @@ package main
 
 import (
 	"context"
-	"github.com/sashabaranov/go-openai"
+	"github.com/zbysir/writeflow/pkg/export"
+	"github.com/zbysir/writeflow_plugin_llm/sashabaranov"
+	"io"
+	"os"
 	"testing"
 )
 
 func TestName(t *testing.T) {
-	lc := NewLangChain().Cmd()["langchain_call"]
+	cmd := NewLangChain(sashabaranov.NewPlugin()).Cmd()
+	lc := cmd["langchain_call"]
+	ne := cmd["new_openai"]
 
-	rsp, err := lc.Exec(context.Background(), map[string]interface{}{
-		"llm":    openai.NewClient("xx"),
+	ctx := context.Background()
+	rsp, err := ne.Exec(ctx, map[string]interface{}{
+		"api_key": os.Getenv("APIKEY"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rsp, err = lc.Exec(ctx, map[string]interface{}{
+		"llm":    rsp["default"],
+		"stream": true,
 		"prompt": "Hello, my name is John. I am a doctor.",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Logf("%+v", rsp)
+	switch r := rsp["default"].(type) {
+	case string:
+		t.Logf("%s", r)
+	case export.Stream:
+		t.Log("stream")
+		re := r.NewReader()
+		for {
+			s, err := re.Read()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				t.Fatal(err)
+			}
+
+			t.Logf("%+v", s)
+		}
+	default:
+		t.Fatalf("unknown type %s", r)
+	}
 }
